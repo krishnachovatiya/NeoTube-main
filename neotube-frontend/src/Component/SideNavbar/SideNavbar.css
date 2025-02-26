@@ -1,0 +1,57 @@
+.home-sideNavbar{
+    display: flex;
+    flex-direction: column;
+    flex: 0.16 1;
+    box-sizing: border-box;
+    height: 92vh;
+    overflow-y: auto;
+    position: fixed;
+    top:55px;
+    left: 0px;
+    width: 275px;
+    padding: 14px;
+    background-color: black;
+    color: white;
+    scrollbar-width: none; 
+}
+
+.homeSideNavbarhide{
+    display: none;
+}
+
+.home-sideNavbarTop{
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid rgb(86,85,85);
+    padding-bottom: 10px;
+}
+
+.home-sideNavbarTopOption{
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding: 9px 10px;
+    cursor: pointer;
+    &:hover{
+        background-color: rgb(35,35,35);
+        border-radius: 15px;
+    }
+}
+
+.home-sideNavbarTopOptionTitle{
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.home-sideNavbarMiddle{
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid rgb(86,85,85);
+    padding-bottom: 10px 0;
+}
+
+.sidebar_logo{
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+}

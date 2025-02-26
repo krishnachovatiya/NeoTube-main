@@ -1,0 +1,142 @@
+/* recommendation on top */
+
+.homepage{
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    flex: 1;
+    margin-left: 274px;
+    min-height: 100vh;
+}
+
+.fullHomepage{
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    flex:1;
+    margin-left: 0;
+}
+
+.homepage-options{
+    display: flex;
+    position: fixed;
+    top: 63px;
+    z-index: 1;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 10px;
+    flex-shrink: 0;
+    height: auto;
+    overflow-x: scroll;
+    background-color: black;
+}
+
+.homepage-options::-webkit-scrollbar {
+   width: 12px;
+}
+
+.homepage-option{
+    flex: 0 0 auto;
+    height: 30px;
+    padding: 1px 10px;
+    background-color: rgb(42,42,42);
+    color: white;
+    font-weight: 600;
+    border-radius: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Main video section */
+.home-mainpage{
+    display: grid;
+    box-sizing: border-box;
+    gap: 10px;
+    grid-template-columns: 384px 384px 384px;
+    padding: 90px 0 20px 0px;
+    background-color: black;
+}
+
+.fullMainHomePage{
+    display: grid;
+    box-sizing: border-box;
+    gap: 30px;
+    grid-template-columns: 326px 326px 326px 326px;
+    padding: 90px 0 20px 10px;
+    background-color: black;
+}
+
+.neotube-video{
+    color: white;
+    text-decoration: none;
+    display: flex;
+    box-sizing: border-box;
+    flex-direction: column;
+    cursor: pointer;
+    height: 316px;
+}
+
+.neotube-thumbnailBox{
+width: 100%;
+position: relative;
+box-sizing: border-box;
+height: 216px;
+}
+
+.thumbnailPic{
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+
+.thumbnail-timing{
+    padding: 1px 2px;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    background-color: rgb(42,42,42);
+    border-radius: 5px;
+}
+
+.neotube-TitleBox{
+    display: flex;
+    padding-top: 10px;
+}
+
+.neotube-TitleBoxProfile{
+    display: flex;
+    width: 50px;
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+}
+
+.thumbnailProfilePic{
+    width: 80%;
+    border-radius: 50%;
+}
+
+.neotube-TitleBoxTitle{
+    width: 100%;
+    padding: 5px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.videoTitle{
+    font-weight: 600;
+    font-size: 16px;
+}
+.videoChannelName{
+    font-size: 18px;
+    color: rgb(170,170,170);
+    margin-top: 5px;
+}
+.videoViews{
+    font-size: 14px;
+    color: rgb(170,170,170);
+}
