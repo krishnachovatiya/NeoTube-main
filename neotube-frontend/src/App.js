@@ -22,7 +22,7 @@ function App() {
         <Route path='/' element={<Home sidenavbar={sidenavbar}/>} />
         <Route path='/watch/:id' element={<Video/>} />
         {/* <Route path='/user/:id' element={<Profile sidenavbar={sidenavbar}/>} /> */}
-        <Route path='/:id/upload' element={<VideoUpload/>} />
+        <Route path='/upload' element={<VideoUpload/>} />
         <Route path='/signup' element={<SignUp  setSideNavbarFunc={setSideNavbarFunc}/>} />
         <Route path='/login' element={<Login/>} />
         <Route path='/profile' element={<Profile/>} />

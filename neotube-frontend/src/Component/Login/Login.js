@@ -7,10 +7,9 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const Login = ({ setLoginModal }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-    const [isLoading, setIsLoading] = useState(false);
- 
-  const navigate = useNavigate(); // For redirection
   const [formData, setFormData] = useState({
     usernameOrEmail: "",
     password: "",
@@ -20,20 +19,17 @@ const Login = ({ setLoginModal }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle login
-  
   const handleLogin = async () => {
-    
     if (!formData.usernameOrEmail || !formData.password) {
       toast.error("Please enter both username/email and password");
       return;
     }
-  
+
     setIsLoading(true);
     try {
       const response = await axios.post(
         "http://localhost:3000/api/v1/user/signin",
-        formData, 
+        formData,
         {
           headers: {
             "Content-Type": "application/json",
@@ -41,16 +37,20 @@ const Login = ({ setLoginModal }) => {
           withCredentials: true,
         }
       );
-  
 
-      localStorage.setItem("accessToken", response.data.data.accessToken);
-      
-      toast.success("Login successful!");
-      setLoginModal();
-      setTimeout(() => navigate("/profile"), 1500);
+      console.log("Full API Response:", response.data);
 
-      
-      
+      const accessToken = response.data?.data?.accessToken;
+      if (accessToken) {
+        localStorage.setItem("accessToken", accessToken);
+        console.log("Token stored:", accessToken);
+
+        toast.success("Login successful!");
+        setLoginModal && setLoginModal(); 
+        setTimeout(() => navigate("/profile"), 1500);
+      } else {
+        toast.error("No access token received from server!");
+      }
     } catch (error) {
       console.error("Login error:", error.response?.data || error.message);
       toast.error(error.response?.data?.message || "Login failed!");
@@ -58,8 +58,7 @@ const Login = ({ setLoginModal }) => {
       setIsLoading(false);
     }
   };
-  
-  
+
   return (
     <div className="login">
       <div className="login_card">
@@ -77,6 +76,7 @@ const Login = ({ setLoginModal }) => {
               onChange={handleChange}
               className="userNameLoginUserName"
               placeholder="Username or Email"
+              disabled={isLoading}
             />
           </div>
 
@@ -88,18 +88,19 @@ const Login = ({ setLoginModal }) => {
               onChange={handleChange}
               className="userNameLoginUserName"
               placeholder="Password"
+              disabled={isLoading}
             />
           </div>
         </div>
 
         <div className="login_buttons">
-          <div className="login-btn" onClick={handleLogin}>
-            Login
+          <div className={`login-btn ${isLoading ? "disabled" : ""}`} onClick={!isLoading ? handleLogin : null}>
+            {isLoading ? "Logging in..." : "Login"}
           </div>
-          <Link to={"/signup"} onClick={() => setLoginModal()} className="login-btn">
+          <Link to={"/signup"} onClick={() => setLoginModal && setLoginModal()} className="login-btn">
             SignUp
           </Link>
-          <div className="login-btn" onClick={() => setLoginModal()}>
+          <div className="login-btn" onClick={() => setLoginModal && setLoginModal()}>
             Cancel
           </div>
         </div>
