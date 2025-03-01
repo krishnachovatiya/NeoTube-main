@@ -10,9 +10,11 @@ const router = express.Router();
 
 router.post("/signup", uploadProfileCover, validate(signUpSchema),  asyncHandler(signUp))
 
-router.post("/setup-profile", authenticate, uploadProfileCover, validate(setupProfileSchema), asyncHandler(setupProfile))
 
 router.post("/signin", validate(signInSchema), asyncHandler(signIn))
+
+router.post("/setup-profile", authenticate, uploadProfileCover, validate(setupProfileSchema), asyncHandler(setupProfile))
+
 
 router.get("/user", authenticate, asyncHandler(getuserById))
 

@@ -14,36 +14,42 @@ const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
   const navigate = useNavigate();
 
   const [userPic, setUserPic] = useState(
+    localStorage.getItem("userProfilePic") ||
     "https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg?s=612x612&w=0&k=20&c=FEppaMMfyIYV2HJ6Ty8tLmPL1GX6Tz9u9Y8SCRrkD-o="
   );
   const [navbarModal, setNavbarModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    setIsLoggedIn(!!token); 
+    const token = localStorage.getItem("accessToken");
     if (token) {
-      fetchUserProfile();
+      setIsLoggedIn(true);
+      fetchUserProfile();  
     }
   }, []);
+  
+  
+  
 
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
-
+  
       const response = await axios.get('http://localhost:3000/api/v1/user/user', {
         headers: { Authorization: `Bearer ${token}` },
         withCredentials: true,
       });
-
+  
       if (response.data.data.profilePicture) {
+        localStorage.setItem("userProfilePic", response.data.data.profilePicture);
         setUserPic(response.data.data.profilePicture);
       }
     } catch (error) {
       console.error("Error fetching user:", error.response?.data || error.message);
     }
   };
+  
 
   const handleProfile = () => {
     navigate('/user/12');
@@ -51,12 +57,15 @@ const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");  
+    localStorage.removeItem("accessToken");
     localStorage.removeItem("userProfilePic");
-    setIsLoggedIn(false); 
-    window.location.href = "/login";
-  };
 
+    setIsLoggedIn(false);
+    setUserPic("https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg");
+
+    navigate("/login");
+  };
+  
   const handleUploadClick = () => {
     if (!isLoggedIn) {
       alert("You need to log in to upload a video!");
