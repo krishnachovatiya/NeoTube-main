@@ -33,7 +33,7 @@
 .profile_top_section{
     width: 100%;
     display: flex;
-    padding: 0 0 20px 0;
+    padding: 40px 0 20px 0;
 }
 
 .profile_top_section_profile{
@@ -57,6 +57,7 @@
 .profile_top_section_about_name {
     font-size: 1.5rem;
     font-weight: bold;
+    color: black;
   }
 
 .profile_top_section_info{
@@ -136,10 +137,11 @@
   
   /* Profile Section */
   .profile_top_section {
+    width:100%;
     display: flex;
     align-items: center;
     gap: 20px;
-    padding: 20px;
+    padding: 40px;
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);

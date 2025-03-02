@@ -78,62 +78,64 @@ export const signUp = async (req: Request, res: Response) => {
 }
 
 export const setupProfile = async (req: Request, res: Response) => {
-    const { channelName, description } = req.body
-    const userId = (req as AuthRequest).userId
-    // const files = req.files as { [fieldname: string]: Express.Multer.File[] }
-    const files = req.files as MulterFileFields | undefined
-
-    const profilePicturePath = files?.profilePicture?.[0]?.path 
-    const coverPicturePath = files?.coverPicture?.[0]?.path
-
-    const existingUser = await prisma.user.findUnique({
-      where:{
-        id: userId
-      }
-    })
-
-    if(!existingUser){
-      throw new ApiError(404, "User does not exist")
+  const { channelName, description } = req.body
+  const userId = (req as AuthRequest).userId
+  const files = req.files as MulterFileFields | undefined
+  const profilePicturePath = files?.profilePicture?.[0]?.path 
+  const coverPicturePath = files?.coverPicture?.[0]?.path
+  
+  const existingUser = await prisma.user.findUnique({
+    where:{
+      id: userId
     }
-
+  })
+  
+  if(!existingUser){
+    throw new ApiError(404, "User does not exist")
+  }
+  
+  // Only check for channel name conflicts if the user is changing their channel name
+  if (channelName && channelName !== existingUser.channelName) {
     const channelNameExists = await prisma.user.findUnique({
-      where: { 
-        channelName 
-      },
-    })
-
+      where: { channelName },
+    });
+  
     if(channelNameExists){
       throw new ApiError(422, "Channel name already exists")
     }
-
-    const updateData: Record<string, any> = {}
-
-    updateData.channelName = channelName
-
-    if (profilePicturePath) {
-      const uploadedProfile = await uploadImageOnCloudinary(profilePicturePath, userId)
-      updateData.profilePicture = uploadedProfile.secure_url
-    }
-
-    if (coverPicturePath) {
-      const uploadedCover = await uploadImageOnCloudinary(coverPicturePath, userId)
-      updateData.coverPicture = uploadedCover.secure_url
-    }
-
-    if (description) {
-      updateData.description = description
-    }
-
-    if (Object.keys(updateData).length > 0) {
-      await prisma.user.update({
-        where: { 
-          id: userId 
-        },
-        data: updateData,
-      })
-    }
-
-    return new ApiResponse(200, "Profile updated successfully").send(res)
+  }
+  
+  // Move the update logic outside the conditional so it runs regardless
+  const updateData: Record<string, any> = {}
+  
+  if (channelName) {
+    updateData.channelName = channelName;
+  }
+  
+  if (profilePicturePath) {
+    const uploadedProfile = await uploadImageOnCloudinary(profilePicturePath, userId)
+    updateData.profilePicture = uploadedProfile.secure_url
+  }
+  
+  if (coverPicturePath) {
+    const uploadedCover = await uploadImageOnCloudinary(coverPicturePath, userId)
+    updateData.coverPicture = uploadedCover.secure_url
+  }
+  
+  if (description) {
+    updateData.description = description
+  }
+  
+  if (Object.keys(updateData).length > 0) {
+    await prisma.user.update({
+      where: { 
+        id: userId 
+      },
+      data: updateData,
+    })
+  }
+  
+  return new ApiResponse(200, "Profile updated successfully").send(res)
 }
 
 // If existingUser is found, the ApiError will be thrown => .catch(next) from asyncHandler => Global error Handler(For customised error)

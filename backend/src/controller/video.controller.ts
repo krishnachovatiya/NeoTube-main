@@ -173,8 +173,8 @@ export const getLikedVideos = async (req: Request, res: Response) => {
 }
 
 export const getAllVideos = async (req: Request, res: Response) => {
-
-}
+   
+  };
 
 export const likeVideo = async (req: Request, res: Response) => {
     const videoId = parseInt(req.params.id, 10)

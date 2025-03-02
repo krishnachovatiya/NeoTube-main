@@ -24,30 +24,32 @@ const Profile = ({ sidenavbar }) => {
       const token = localStorage.getItem("accessToken");
       if (!token) {
         console.error("No access token found");
-        return;
+        setError("Unauthorized: Please log in again.");
+        return null;
       }
-
-
+      
       const response = await axios.get("http://localhost:3000/api/v1/user/user", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
         withCredentials: true,
       });
-
-      console.log("User data response:", response.data);
+      
       if (response.data.data) {
         setUser(response.data.data);
         setFormData({
           channelName: response.data.data.channelName || "",
           description: response.data.data.description || "",
-          profilePicture: response.data.data.profilePicture || null,
-          coverPicture: response.data.data.coverPicture || null,
+          profilePicture: null, // Reset file inputs
+          coverPicture: null,   // Reset file inputs
         });
+        return response.data.data; // Return the user data
       }
+      return null;
     } catch (error) {
       console.error("Error fetching user:", error.response?.data || error.message);
       setError("Failed to fetch user data.");
+      return null;
     }
   };
 
@@ -64,29 +66,33 @@ const Profile = ({ sidenavbar }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
+  
     const token = localStorage.getItem("accessToken");
     if (!token) {
       console.error("No access token found");
       setError("Unauthorized: Please log in again.");
       return;
     }
-
+  
     const formDataToSend = new FormData();
-    formDataToSend.append("channelName", formData.channelName);
-    formDataToSend.append("description", formData.description);
-    if (formData.profilePicture) {
+    
+   
+    if (formData.channelName) {
+      formDataToSend.append("channelName", formData.channelName);
+    }
+    
+    if (formData.description) {
+      formDataToSend.append("description", formData.description);
+    }
+    
+    if (formData.profilePicture instanceof File) {
       formDataToSend.append("profilePicture", formData.profilePicture);
     }
-    if (formData.coverPicture) {
+    
+    if (formData.coverPicture instanceof File) {
       formDataToSend.append("coverPicture", formData.coverPicture);
     }
-
-    console.log("Sending Form Data:");
-    for (let pair of formDataToSend.entries()) {
-      console.log(pair[0], pair[1]);
-    }
-
+  
     try {
       const response = await axios.post("http://localhost:3000/api/v1/user/setup-profile", formDataToSend, {
         headers: {
@@ -95,25 +101,30 @@ const Profile = ({ sidenavbar }) => {
         },
         withCredentials: true,
       });
-
-      console.log("Profile updated:", response.data);
+  
       if (response.data.success) {
-        setUser({
-          ...user,
-          channelName: formData.channelName,
-          description: formData.description,
-          profilePicture: formData.profilePicture ? URL.createObjectURL(formData.profilePicture) : user?.profilePicture,
-          coverPicture: formData.coverPicture ? URL.createObjectURL(formData.coverPicture) : user?.coverPicture,
-        });
-        localStorage.setItem("userProfilePic", URL.createObjectURL(formData.profilePicture)); 
+        
+        const updatedUser = await fetchUser();
+        
+       
+        if (updatedUser && updatedUser.profilePicture && formData.profilePicture instanceof File) {
+          localStorage.setItem("userProfilePic", updatedUser.profilePicture);
+          
+          
+          const profileUpdateEvent = new CustomEvent('profileUpdate', { 
+            detail: { profilePicture: updatedUser.profilePicture } 
+          });
+          window.dispatchEvent(profileUpdateEvent);
+        }
+        
         setIsEditing(false);
-        window.location.reload();
       }
     } catch (error) {
       console.error("Error updating profile:", error.response?.data || error.message);
-      setError("Failed to update profile. Please try again.");
+      setError(error.response?.data?.message || "Failed to update profile. Please try again.");
     }
   };
+  
 
   return (
     <div className="profile">

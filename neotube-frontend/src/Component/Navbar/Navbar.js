@@ -6,35 +6,73 @@ import SearchIcon from '@mui/icons-material/Search';
 import KeyboardVoiceIcon from '@mui/icons-material/KeyboardVoice';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
+
+  const location = useLocation()
 
   const navigate = useNavigate();
 
   const [userPic, setUserPic] = useState(
     localStorage.getItem("userProfilePic") ||
-    "https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg?s=612x612&w=0&k=20&c=FEppaMMfyIYV2HJ6Ty8tLmPL1GX6Tz9u9Y8SCRrkD-o="
+    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
   );
   const [navbarModal, setNavbarModal] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('accessToken'));
 
   useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-      setIsLoggedIn(true);
-      fetchUserProfile();  
+    const storedProfilePic = localStorage.getItem("userProfilePic");
+    if (storedProfilePic) {
+      setUserPic(storedProfilePic);
     }
+  
+    // Check if user is logged in based on token presence
+    const token = localStorage.getItem('accessToken');
+    setIsLoggedIn(!!token);
+    
+    if (token) {
+      fetchUserProfile();
+    }
+  
+    // Listen for profile picture updates with our custom event
+    const handleProfileUpdate = (event) => {
+      if (event.detail && event.detail.profilePicture) {
+        setUserPic(event.detail.profilePicture);
+      }
+    };
+  
+    window.addEventListener("profileUpdate", handleProfileUpdate);
+    
+    // Keep the storage event listener for cross-tab updates
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('accessToken');
+      setIsLoggedIn(!!token);
+      
+      const storedPic = localStorage.getItem("userProfilePic");
+      if (storedPic) {
+        setUserPic(storedPic);
+      } else if (!token) {
+        setUserPic("https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png");
+      }
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+  
+    return () => {
+      window.removeEventListener("profileUpdate", handleProfileUpdate);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
   
-  
-  
-
   const fetchUserProfile = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) return;
+      if (!token) {
+        setIsLoggedIn(false);
+        return;
+      }
   
       const response = await axios.get('http://localhost:3000/api/v1/user/user', {
         headers: { Authorization: `Bearer ${token}` },
@@ -45,15 +83,21 @@ const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
         localStorage.setItem("userProfilePic", response.data.data.profilePicture);
         setUserPic(response.data.data.profilePicture);
       }
+      
+      setIsLoggedIn(true);
     } catch (error) {
       console.error("Error fetching user:", error.response?.data || error.message);
+      // If error is 401 Unauthorized, clear token and set isLoggedIn to false
+      if (error.response?.status === 401) {
+        localStorage.removeItem("accessToken");
+        setIsLoggedIn(false);
+      }
     }
   };
   
-
   const handleProfile = () => {
-    navigate('/user/12');
-    setNavbarModal(false);
+    navigate('/profile');
+  setNavbarModal(false);
   };
 
   const handleLogout = () => {
@@ -61,8 +105,8 @@ const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
     localStorage.removeItem("userProfilePic");
 
     setIsLoggedIn(false);
-    setUserPic("https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg");
-
+    setNavbarModal(false);
+    setUserPic("https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png");
     navigate("/login");
   };
   
@@ -116,8 +160,8 @@ const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
               </>
             ) : (
               <>
-                <div className="navbar_modal_option" onClick={() => navigate('/login')}>Sign In</div>
-                <div className="navbar_modal_option" onClick={() => navigate('/signup')}>Sign Up</div>
+                <div className="navbar_modal_option" onClick={() => { navigate('/login'); setNavbarModal(false); }}>Sign In</div>
+                <div className="navbar_modal_option" onClick={() => { navigate('/signup'); setNavbarModal(false); }}>Sign Up</div>
               </>
             )}
           </div>

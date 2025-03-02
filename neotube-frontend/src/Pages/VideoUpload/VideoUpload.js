@@ -35,30 +35,46 @@ const VideoUpload = () => {
       alert("Title, Description, and Video are required!");
       return;
     }
-
+  
+    const token = localStorage.getItem("accessToken");
+    // console.log("Token being used for upload:", token);
+    
+    if (!token) {
+      alert("You are not logged in. Please log in and try again.");
+      navigate("/login");
+      return;
+    }
+  
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
     formData.append("video", video);
     if (thumbnail) formData.append("thumbnail", thumbnail);
-
+  
     setLoading(true);
-    setProgress(0); 
-
+    setProgress(0);
+  
     try {
-      const token = localStorage.getItem("token"); 
-      const response = await axios.post("http://localhost:3000/api/v1/video/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setProgress(percentCompleted);
-        },
-      });
+      const authHeader = `Bearer ${token}`;
+      // console.log("Auth header:", authHeader);
+      
+      const response = await axios.post(
+        "http://localhost:3000/api/v1/video/upload", 
+        formData, 
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "Authorization": authHeader,
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setProgress(percentCompleted);
+          },
+        }
+      );
+      
 
-      console.log(response.data);
+      // console.log(response.data);
       alert("Video uploaded successfully!");
       navigate("/"); 
     } catch (error) {
