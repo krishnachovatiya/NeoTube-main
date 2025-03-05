@@ -40,10 +40,10 @@ const Profile = ({ sidenavbar }) => {
         setFormData({
           channelName: response.data.data.channelName || "",
           description: response.data.data.description || "",
-          profilePicture: null, // Reset file inputs
-          coverPicture: null,   // Reset file inputs
+          profilePicture: null,
+          coverPicture: null,   
         });
-        return response.data.data; // Return the user data
+        return response.data.data; 
       }
       return null;
     } catch (error) {

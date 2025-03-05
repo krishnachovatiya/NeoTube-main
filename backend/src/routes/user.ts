@@ -8,15 +8,15 @@ import { authenticate } from "../middleware/auth.middleware";
 
 const router = express.Router();
 
-router.post("/signup", uploadProfileCover, validate(signUpSchema),  asyncHandler(signUp))
+router.post("/signup", uploadProfileCover, validate(signUpSchema),  asyncHandler(signUp)) // --> done
 
 
-router.post("/signin", validate(signInSchema), asyncHandler(signIn))
+router.post("/signin", validate(signInSchema), asyncHandler(signIn)) // --> done
 
-router.post("/setup-profile", authenticate, uploadProfileCover, validate(setupProfileSchema), asyncHandler(setupProfile))
+router.post("/setup-profile", authenticate, uploadProfileCover, validate(setupProfileSchema), asyncHandler(setupProfile)) // --> done
 
 
-router.get("/user", authenticate, asyncHandler(getuserById))
+router.get("/user", authenticate, asyncHandler(getuserById)) // --> done
 
 // we can create a video tag by cloudinary.video("public_id")
 // cloudinary.url("public_id", {type:"fetch"}) => for auto updation of image we are using remote source

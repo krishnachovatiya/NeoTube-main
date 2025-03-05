@@ -5,13 +5,20 @@ import ThumbDownIcon from '@mui/icons-material/ThumbDown';
 import { toast, ToastContainer } from 'react-toastify';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { useUserContext } from './../../useContext';
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toISOString().split('T')[0];
+};
+
+
 
 const Video = () => {
   const { id } = useParams();
   const [video, setVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isCommentFocused, setIsCommentFocused] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
@@ -19,25 +26,19 @@ const Video = () => {
   const [userLiked, setUserLiked] = useState(false);
   const [userDisliked, setUserDisliked] = useState(false);
 
-  const defaultProfilePicture =
+  const { 
+    isLoggedIn, 
+    userDetails, 
+    userProfilePic 
+  } = useUserContext();
+
+  const defaultProfilePicture = 
     'https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg?s=612x612&w=0&k=20&c=FEppaMMfyIYV2HJ6Ty8tLmPL1GX6Tz9u9Y8SCRrkD-o=';
 
-  const currentUser = useMemo(() => {
-    const profilePicture =
-      localStorage.getItem('userProfilePic') || defaultProfilePicture;
-    return { profilePicture };
-  }, []);
-
-  useEffect(() => {
-    const checkLoginStatus = () => {
-      const token = localStorage.getItem('accessToken');
-      setIsLoggedIn(!!token);
-    };
-
-    checkLoginStatus();
-    window.addEventListener('storage', checkLoginStatus);
-    return () => window.removeEventListener('storage', checkLoginStatus);
-  }, []);
+  const currentUserProfilePic = useMemo(() => 
+    userProfilePic || defaultProfilePicture, 
+    [userProfilePic]
+  );
 
   useEffect(() => {
     const fetchVideo = async () => {
@@ -48,30 +49,24 @@ const Video = () => {
         const videoData = response.data.data;
         setVideo(videoData);
 
-        const likes =
-          videoData.videoEngagement?.filter(
-            (e) => e.engagementType === 'LIKE'
-          ).length || 0;
-        const dislikes =
-          videoData.videoEngagement?.filter(
-            (e) => e.engagementType === 'DISLIKE'
-          ).length || 0;
-
+        const likes = videoData.videoEngagement?.filter(
+          (e) => e.engagementType === 'LIKE'
+        ).length || 0;
+        const dislikes = videoData.videoEngagement?.filter(
+          (e) => e.engagementType === 'DISLIKE'
+        ).length || 0;
         setLikeCount(likes);
         setDislikeCount(dislikes);
 
-        if (isLoggedIn) {
-          const userId = JSON.parse(localStorage.getItem('user'))?.id;
+        if (isLoggedIn && userDetails) {
           const userEngagement = videoData.videoEngagement?.find(
-            (e) => e.userId === userId
+            (e) => e.userId === userDetails.id
           );
-
           if (userEngagement) {
             setUserLiked(userEngagement.engagementType === 'LIKE');
             setUserDisliked(userEngagement.engagementType === 'DISLIKE');
           }
         }
-
         setLoading(false);
       } catch (err) {
         console.error('Error fetching video:', err);
@@ -81,29 +76,7 @@ const Video = () => {
     };
 
     fetchVideo();
-  }, [id, isLoggedIn]);
-
-  const getUserDetailsFromLocalStorage = useCallback(() => {
-    try {
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
-        const tokenParts = accessToken.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          const profilePic = localStorage.getItem('userProfilePic');
-          return {
-            id: payload.userId,
-            username: payload.username,
-            profilePicture: profilePic || defaultProfilePicture,
-          };
-        }
-      }
-      return null;
-    } catch (error) {
-      console.error('Error retrieving user details:', error);
-      return null;
-    }
-  }, []);
+  }, [id, isLoggedIn, userDetails]);
 
   const handleLike = useCallback(async () => {
     if (!isLoggedIn) {
@@ -113,27 +86,24 @@ const Video = () => {
       });
       return;
     }
-
     try {
       const token = localStorage.getItem('accessToken');
       const response = await axios.post(
         `http://localhost:3000/api/v1/video/${id}/like`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
+      
       const { liked, likeCount: newLikeCount } = response.data.data;
-
       setLikeCount(newLikeCount);
       setUserLiked(liked);
-
+      
+      // Toggle dislike if needed
       if (liked && userDisliked) {
         setUserDisliked(false);
         setDislikeCount((prev) => Math.max(0, prev - 1));
       }
-
+      
       toast.success(liked ? 'Video liked' : 'Like removed', {
         position: 'top-right',
         autoClose: 1000,
@@ -155,27 +125,24 @@ const Video = () => {
       });
       return;
     }
-
     try {
       const token = localStorage.getItem('accessToken');
       const response = await axios.post(
         `http://localhost:3000/api/v1/video/${id}/dislike`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
+      
       const { disliked, dislikeCount: newDislikeCount } = response.data.data;
-
       setDislikeCount(newDislikeCount);
       setUserDisliked(disliked);
-
+      
+      // Toggle like if needed
       if (disliked && userLiked) {
         setUserLiked(false);
         setLikeCount((prev) => Math.max(0, prev - 1));
       }
-
+      
       toast.success(disliked ? 'Video disliked' : 'Dislike removed', {
         position: 'top-right',
         autoClose: 1000,
@@ -197,7 +164,7 @@ const Video = () => {
       });
       return;
     }
-
+    
     if (!commentText.trim()) {
       toast.warn('Comment cannot be empty!', {
         position: 'top-center',
@@ -205,44 +172,33 @@ const Video = () => {
       });
       return;
     }
-
+    
     try {
       const token = localStorage.getItem('accessToken');
-      const currentUser = getUserDetailsFromLocalStorage();
-
-      if (!currentUser) {
-        toast.error('Could not retrieve user details', {
-          position: 'top-center',
-          autoClose: 1000,
-        });
-        return;
-      }
-
       const response = await axios.post(
         `http://localhost:3000/api/v1/video/${id}/comment`,
         { content: commentText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
+      
       const newComment = response.data.data;
-
       const commentWithUserDetails = {
         ...newComment,
         user: {
-          id: currentUser.id,
-          username: currentUser.username,
-          profilePicture: currentUser.profilePicture,
+          id: userDetails.id,
+          username: userDetails.username,
+          profilePicture: userDetails.profilePicture || defaultProfilePicture,
         },
       };
-
+      
       setVideo((prevVideo) => ({
         ...prevVideo,
         comments: [...prevVideo.comments, commentWithUserDetails],
       }));
-
+      
       setCommentText('');
       setIsCommentFocused(false);
-
+      
       toast.success('Comment added!', {
         position: 'top-center',
         autoClose: 1000,
@@ -254,42 +210,44 @@ const Video = () => {
         autoClose: 1000,
       });
     }
-  }, [commentText, getUserDetailsFromLocalStorage, id, isLoggedIn]);
+  }, [commentText, id, isLoggedIn, userDetails]);
 
   if (loading) return <div className="video">Loading video...</div>;
   if (error) return <div className="video">{error}</div>;
   if (!video) return <div className="video">Video not found.</div>;
 
-  const formatDate = (dateString) => {
+  const formatTimeAgo = (dateString) => {
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
-  };
-
-  const formatTimeAgo = (date) => {
     const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
-    if (diffInSeconds < 60) {
-      return `${diffInSeconds} seconds ago`;
-    }
+    const diffInMilliseconds = now - date;
+    const diffInSeconds = Math.floor(diffInMilliseconds / 1000);
     const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    const diffInMonths = Math.floor(diffInDays / 30);
+    const diffInYears = Math.floor(diffInDays / 365);
+  
+    if (diffInSeconds < 1) {
+      return 'Just now';
+    }
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds} second${diffInSeconds !== 1 ? 's' : ''} ago`;
+    }
     if (diffInMinutes < 60) {
       return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
     }
-    const diffInHours = Math.floor(diffInMinutes / 60);
     if (diffInHours < 24) {
       return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
     }
-    const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays < 30) {
       return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
     }
-    const diffInMonths = Math.floor(diffInDays / 30);
     if (diffInMonths < 12) {
       return `${diffInMonths} month${diffInMonths !== 1 ? 's' : ''} ago`;
     }
-    const diffInYears = Math.floor(diffInMonths / 12);
     return `${diffInYears} year${diffInYears !== 1 ? 's' : ''} ago`;
   };
+
 
   return (
     <div className="video">
@@ -429,7 +387,7 @@ const Video = () => {
                         {comment.user?.username || 'Unknown User'}
                       </div>
                       <div className="commentTimingOther">
-                        {formatTimeAgo(new Date(comment.createdAt))}
+                        {formatTimeAgo(comment.createdAt)}
                       </div>
                     </div>
                     <div className="otherCommentSectionComment">

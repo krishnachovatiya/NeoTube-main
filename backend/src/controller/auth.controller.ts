@@ -17,9 +17,6 @@ interface MulterFileFields {
 export const signUp = async (req: Request, res: Response) => {
     const { username, email, password } = req.body
 
-    // const files = req.files as { [fieldname: string]: Express.Multer.File[] }
-    // const profilePicture = files?.profilePicture?.[0]?.path || null
-    // const coverPicture = files?.coverPicture?.[0]?.path || null
     
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -36,32 +33,12 @@ export const signUp = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // let profilePictureUrl: string | null=null
-    // let coverPictureUrl: string | null=null
-
-    // if (profilePicture) {
-    //       const uploadedProfile = await uploadImageOnCloudinary(profilePicture, username);
-    //       profilePictureUrl = uploadedProfile.secure_url;
-    //       console.log(profilePictureUrl)
-    // }
-  
-    // if (coverPicture) {
-    //   try {
-    //       const uploadedCover = await uploadImageOnCloudinary(coverPicture, username);
-    //       coverPictureUrl = uploadedCover.secure_url;
-    //   } catch (error) {
-    //       throw new ApiError(500, "Cover picture upload failed");
-    //   }
-    // }
 
     const newUser = await prisma.user.create({
       data: {
         username,
         email,
         password: hashedPassword,
-        // profilePicture: profilePictureUrl,
-        // coverPicture: coverPictureUrl,
-        // description: description ?? null,
       },
     });
 
@@ -136,14 +113,12 @@ export const setupProfile = async (req: Request, res: Response) => {
   return new ApiResponse(200, "Profile updated successfully").send(res)
 }
 
-// If existingUser is found, the ApiError will be thrown => .catch(next) from asyncHandler => Global error Handler(For customised error)
 
 export const signIn = async (req: Request, res: Response) => {
   const { password } = req.body
   const username = req.body.usernameOrEmail
   const email = req.body.usernameOrEmail
 
-  // Can't use findUniqueOrThrow because it can not more than 1 unique field in OR: [ {},{} ]
   const user = await prisma.user.findFirstOrThrow({ 
     where: {
       OR: [ 
@@ -173,7 +148,6 @@ export const signIn = async (req: Request, res: Response) => {
 export const getuserById = async (req: Request, res: Response) => {
   const userId = (req as AuthRequest).userId
 
-  // check if any data you want to hide from other user such as email, playlists to implement this pass id from parameter, and check if userId and and id from param are same 
 
   const user = await prisma.user.findUnique({
     where:{

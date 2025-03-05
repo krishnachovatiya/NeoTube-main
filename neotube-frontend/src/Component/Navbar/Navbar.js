@@ -8,114 +8,37 @@ import VideoCallIcon from '@mui/icons-material/VideoCall';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useUserContext } from './../../useContext';
+
 
 const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
-
-  const location = useLocation()
-
+  const [navbarModal, setNavbarModal] = useState(false);
+  const { 
+    isLoggedIn, 
+    userProfilePic, 
+    logout 
+  } = useUserContext();
   const navigate = useNavigate();
 
-  const [userPic, setUserPic] = useState(
-    localStorage.getItem("userProfilePic") ||
-    "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-  );
-  const [navbarModal, setNavbarModal] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('accessToken'));
-
-useEffect(() => {
-  const token = localStorage.getItem('accessToken');
-  const storedProfilePic = localStorage.getItem("userProfilePic");
-  
-  setIsLoggedIn(!!token);
-  
-  if (storedProfilePic) {
-    setUserPic(storedProfilePic);
-  } else if (token) {
-    fetchUserProfile();
-  } else {
-    setUserPic("https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png");
-  }
-
-  const handleProfileUpdate = (event) => {
-    if (event.detail && event.detail.profilePicture) {
-      setUserPic(event.detail.profilePicture);
-    }
-  };
-
-  window.addEventListener("profileUpdate", handleProfileUpdate);
-  
-  const handleStorageChange = (e) => {
-    if (e.key === "accessToken") {
-      setIsLoggedIn(!!e.newValue);
-    }
-    if (e.key === "userProfilePic" && e.newValue) {
-      setUserPic(e.newValue);
-    }
-  };
-  
-  window.addEventListener("storage", handleStorageChange);
-
-  return () => {
-    window.removeEventListener("profileUpdate", handleProfileUpdate);
-    window.removeEventListener("storage", handleStorageChange);
-  };
-}, []);
-  
-const fetchUserProfile = async () => {
-  try {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setIsLoggedIn(false);
-      return;
-    }
-
-    const response = await axios.get('http://localhost:3000/api/v1/user/user', {
-      headers: { Authorization: `Bearer ${token}` },
-      withCredentials: true,
-    });
-
-    if (response.data.data.profilePicture) {
-      setUserPic(response.data.data.profilePicture);
-      localStorage.setItem("userProfilePic", response.data.data.profilePicture);
-    }
-    
-    setIsLoggedIn(true);
-  } catch (error) {
-    console.error("Error fetching user:", error.response?.data || error.message);
-    if (error.response?.status === 401) {
-      localStorage.removeItem("accessToken");
-      setIsLoggedIn(false);
-    }
-  }
-};
-  
   const handleProfile = () => {
     navigate('/profile');
-  setNavbarModal(false);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("userProfilePic");
-
-    setIsLoggedIn(false);
     setNavbarModal(false);
-    setUserPic("https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png");
-    navigate("/login");
   };
-  
+
   const handleUploadClick = () => {
-    const token = localStorage.getItem("accessToken");
-  
-    if (!token) {
+    if (!isLoggedIn) {
       alert("You need to log in to upload a video!");
       navigate("/login");
     } else {
       navigate("/upload");
     }
   };
-  
-  
+
+  const handleLogout = () => {
+    logout();
+    setNavbarModal(false);
+    navigate("/login");
+  };
 
   return (
     <div className='navbar'>
@@ -147,7 +70,12 @@ const fetchUserProfile = async () => {
           onClick={handleUploadClick} 
         />
         <NotificationsIcon sx={{ color: "white", fontSize: "30px", cursor: "pointer" }} />
-        <img onClick={() => setNavbarModal(!navbarModal)} src={userPic} className='navbar-right-logo' alt='User' />
+        <img 
+          onClick={() => setNavbarModal(!navbarModal)} 
+          src={userProfilePic} 
+          className='navbar-right-logo' 
+          alt='User' 
+        />
 
         {navbarModal && (
           <div className="navbar_modal">
@@ -158,8 +86,18 @@ const fetchUserProfile = async () => {
               </>
             ) : (
               <>
-                <div className="navbar_modal_option" onClick={() => { navigate('/login'); setNavbarModal(false); }}>Sign In</div>
-                <div className="navbar_modal_option" onClick={() => { navigate('/signup'); setNavbarModal(false); }}>Sign Up</div>
+                <div 
+                  className="navbar_modal_option" 
+                  onClick={() => { navigate('/login'); setNavbarModal(false); }}
+                >
+                  Sign In
+                </div>
+                <div 
+                  className="navbar_modal_option" 
+                  onClick={() => { navigate('/signup'); setNavbarModal(false); }}
+                >
+                  Sign Up
+                </div>
               </>
             )}
           </div>

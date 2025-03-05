@@ -8,27 +8,26 @@ import { authenticate } from "../middleware/auth.middleware"
 
 const router = Router()
 
-router.post("/upload", authenticate, uploadVideoWithThumbnail, validate(videoUploadSchema), asyncHandler(uploadVideo))
+router.post("/upload", authenticate, uploadVideoWithThumbnail, validate(videoUploadSchema), asyncHandler(uploadVideo)) //--> used
 
 router.delete("/:id", authenticate, asyncHandler(deleteVideoById))
 
-router.get("/:userId/videos", authenticate, asyncHandler(getVideosByUser))  //if i enter userId it shows me number of videos they have uploaded --> used
+router.get("/:userId/videos", authenticate, asyncHandler(getVideosByUser))  //--> used  (if i enter userId it shows me number of videos they have uploaded )
 
-router.get("/", asyncHandler(getAllVideos)) // used
+router.get("/", asyncHandler(getAllVideos)) // --> used
 
 router.get("/liked-videos", authenticate, asyncHandler(getLikedVideos))
 
-router.get("/:id", asyncHandler(getVideoById))  //to get a particular video using videoId -->used
+router.get("/:id", asyncHandler(getVideoById))  //--> used (to get a particular video using videoId)
+router.post("/:id/like", authenticate, asyncHandler(likeVideo)) //--> used
 
-router.post("/:id/like", authenticate, asyncHandler(likeVideo)) //used
+router.post("/:id/dislike", authenticate, asyncHandler(dislikeVideo)) //--> used
 
-router.post("/:id/dislike", authenticate, asyncHandler(dislikeVideo)) //used
-
-router.post("/:videoId/comment", authenticate, validate(commentSchema), asyncHandler(addComment))
+router.post("/:videoId/comment", authenticate, validate(commentSchema), asyncHandler(addComment)) //-->used
 
 // router.get("/:videoId/comments", authenticate ,asyncHandler(getComments)) // not needed as comment will be fetched in getVideoById
 
-router.delete("/:userId/comment/:commentId", authenticate, asyncHandler(deleteCommentById))
+router.delete("/:userId/comment/:commentId", authenticate, asyncHandler(deleteCommentById)) 
 // need to update, should be video id and commentid
 
 export default router
