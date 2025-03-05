@@ -1,236 +1,474 @@
-import React from 'react'
-import './Video.css'
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import './Video.css';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ThumbDownIcon from '@mui/icons-material/ThumbDown';
-import {toast,ToastContainer} from 'react-toastify'
-import { Link } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import { Link, useParams } from 'react-router-dom';
+import axios from 'axios';
 
 const Video = () => {
+  const { id } = useParams();
+  const [video, setVideo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [isCommentFocused, setIsCommentFocused] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [dislikeCount, setDislikeCount] = useState(0);
+  const [userLiked, setUserLiked] = useState(false);
+  const [userDisliked, setUserDisliked] = useState(false);
+
+  const defaultProfilePicture =
+    'https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg?s=612x612&w=0&k=20&c=FEppaMMfyIYV2HJ6Ty8tLmPL1GX6Tz9u9Y8SCRrkD-o=';
+
+  const currentUser = useMemo(() => {
+    const profilePicture =
+      localStorage.getItem('userProfilePic') || defaultProfilePicture;
+    return { profilePicture };
+  }, []);
+
+  useEffect(() => {
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem('accessToken');
+      setIsLoggedIn(!!token);
+    };
+
+    checkLoginStatus();
+    window.addEventListener('storage', checkLoginStatus);
+    return () => window.removeEventListener('storage', checkLoginStatus);
+  }, []);
+
+  useEffect(() => {
+    const fetchVideo = async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:3000/api/v1/video/${id}`
+        );
+        const videoData = response.data.data;
+        setVideo(videoData);
+
+        const likes =
+          videoData.videoEngagement?.filter(
+            (e) => e.engagementType === 'LIKE'
+          ).length || 0;
+        const dislikes =
+          videoData.videoEngagement?.filter(
+            (e) => e.engagementType === 'DISLIKE'
+          ).length || 0;
+
+        setLikeCount(likes);
+        setDislikeCount(dislikes);
+
+        if (isLoggedIn) {
+          const userId = JSON.parse(localStorage.getItem('user'))?.id;
+          const userEngagement = videoData.videoEngagement?.find(
+            (e) => e.userId === userId
+          );
+
+          if (userEngagement) {
+            setUserLiked(userEngagement.engagementType === 'LIKE');
+            setUserDisliked(userEngagement.engagementType === 'DISLIKE');
+          }
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching video:', err);
+        setError(`Failed to fetch video: ${err.message}`);
+        setLoading(false);
+      }
+    };
+
+    fetchVideo();
+  }, [id, isLoggedIn]);
+
+  const getUserDetailsFromLocalStorage = useCallback(() => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      if (accessToken) {
+        const tokenParts = accessToken.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          const profilePic = localStorage.getItem('userProfilePic');
+          return {
+            id: payload.userId,
+            username: payload.username,
+            profilePicture: profilePic || defaultProfilePicture,
+          };
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error retrieving user details:', error);
+      return null;
+    }
+  }, []);
+
+  const handleLike = useCallback(async () => {
+    if (!isLoggedIn) {
+      toast.info('Sign in to like videos', {
+        position: 'top-center',
+        autoClose: 1000,
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await axios.post(
+        `http://localhost:3000/api/v1/video/${id}/like`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const { liked, likeCount: newLikeCount } = response.data.data;
+
+      setLikeCount(newLikeCount);
+      setUserLiked(liked);
+
+      if (liked && userDisliked) {
+        setUserDisliked(false);
+        setDislikeCount((prev) => Math.max(0, prev - 1));
+      }
+
+      toast.success(liked ? 'Video liked' : 'Like removed', {
+        position: 'top-right',
+        autoClose: 1000,
+      });
+    } catch (err) {
+      console.error('Error liking video:', err);
+      toast.error('Failed to register like', {
+        position: 'top-right',
+        autoClose: 1000,
+      });
+    }
+  }, [id, isLoggedIn, userDisliked]);
+
+  const handleDislike = useCallback(async () => {
+    if (!isLoggedIn) {
+      toast.info('Sign in to dislike videos', {
+        position: 'top-center',
+        autoClose: 1000,
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await axios.post(
+        `http://localhost:3000/api/v1/video/${id}/dislike`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const { disliked, dislikeCount: newDislikeCount } = response.data.data;
+
+      setDislikeCount(newDislikeCount);
+      setUserDisliked(disliked);
+
+      if (disliked && userLiked) {
+        setUserLiked(false);
+        setLikeCount((prev) => Math.max(0, prev - 1));
+      }
+
+      toast.success(disliked ? 'Video disliked' : 'Dislike removed', {
+        position: 'top-right',
+        autoClose: 1000,
+      });
+    } catch (err) {
+      console.error('Error disliking video:', err);
+      toast.error('Failed to register dislike', {
+        position: 'top-right',
+        autoClose: 1000,
+      });
+    }
+  }, [id, isLoggedIn, userLiked]);
+
+  const handleCommentSubmit = useCallback(async () => {
+    if (!isLoggedIn) {
+      toast.info('Sign in to comment', {
+        position: 'top-center',
+        autoClose: 1000,
+      });
+      return;
+    }
+
+    if (!commentText.trim()) {
+      toast.warn('Comment cannot be empty!', {
+        position: 'top-center',
+        autoClose: 1000,
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const currentUser = getUserDetailsFromLocalStorage();
+
+      if (!currentUser) {
+        toast.error('Could not retrieve user details', {
+          position: 'top-center',
+          autoClose: 1000,
+        });
+        return;
+      }
+
+      const response = await axios.post(
+        `http://localhost:3000/api/v1/video/${id}/comment`,
+        { content: commentText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const newComment = response.data.data;
+
+      const commentWithUserDetails = {
+        ...newComment,
+        user: {
+          id: currentUser.id,
+          username: currentUser.username,
+          profilePicture: currentUser.profilePicture,
+        },
+      };
+
+      setVideo((prevVideo) => ({
+        ...prevVideo,
+        comments: [...prevVideo.comments, commentWithUserDetails],
+      }));
+
+      setCommentText('');
+      setIsCommentFocused(false);
+
+      toast.success('Comment added!', {
+        position: 'top-center',
+        autoClose: 1000,
+      });
+    } catch (err) {
+      console.error('Error submitting comment:', err);
+      toast.error('Failed to add comment', {
+        position: 'top-center',
+        autoClose: 1000,
+      });
+    }
+  }, [commentText, getUserDetailsFromLocalStorage, id, isLoggedIn]);
+
+  if (loading) return <div className="video">Loading video...</div>;
+  if (error) return <div className="video">{error}</div>;
+  if (!video) return <div className="video">Video not found.</div>;
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
+
+  const formatTimeAgo = (date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    if (diffInSeconds < 60) {
+      return `${diffInSeconds} seconds ago`;
+    }
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
+    }
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) {
+      return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+    }
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) {
+      return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
+    }
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12) {
+      return `${diffInMonths} month${diffInMonths !== 1 ? 's' : ''} ago`;
+    }
+    const diffInYears = Math.floor(diffInMonths / 12);
+    return `${diffInYears} year${diffInYears !== 1 ? 's' : ''} ago`;
+  };
+
   return (
-    <div className='video'>
+    <div className="video">
       <div className="videoPostSection">
         <div className="video_neoTube">
-            <video className='video_neoTube_videos' width="400" controls autoPlay >
-                <source src={"https://www.google.com/search?sca_esv=c935ac157191f824&rlz=1C1CHBD_enIN1143IN1143&sxsrf=AHTn8zogD5X3rLh010lBNPwyDz4VAHadTQ:1737650686628&q=short+video+20+second&source=lnms&fbs=ABzOT_CWdhQLP1FcmU5B0fn3xuWpA-dk4wpBWOGsoR7DG5zJBjLjqIC1CYKD9D-DQAQS3Z49oR1qp-GHVCzRMbvBmBq7Ug5Qh2orPrTocEzu8v4scKXU5UvGYUuNobQE3InpIaUDR96EuhJCk_2lxLVHJfxZt72uvbi35J-atNuiyysEClldIXAYryT_WcO8QQ3zxK2Fxy9Ye0xzFE3kTJeWrEZ6XaexIQ&sa=X&ved=2ahUKEwi5_q2fpYyLAxXjSmwGHb4DD8YQ0pQJegQIEBAB&biw=1600&bih=732&dpr=1.2#"} type='video/mp4' />
-            </video>
+          <video className="video_neoTube_videos" width="400" controls autoPlay>
+            <source src={video.videoUrl} type="video/mp4" />
+          </video>
         </div>
-
         <div className="videoAbout">
-            <div className="videoTitle">{"Javascript for begineers"}</div>
-
-            <div className="neoTube_video_ProfileBlock">
-                <div className="neoTube_video_ProfileBlockLeft">
-                    <Link to={'/user/12'} className="ProfileBlockLeftImages">
-                        <img className='ProfileBlockLeftImage' src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3I8MHCoQwIr7JRNGJofutnnyXyD12S0aRBw&s" alt="" />
-                    </Link>
-
-                    <div className="video_subsView">
-                        <div className="neoTubeProfileName">{"User 1"}</div>
-                        <div className="neoTubeProfileSubs">{"2024-01-20"}</div>
-                    </div>
-
-                    <div className="subsButton">Subscribe</div>
-
+          <div className="videoTitle">{video.title}</div>
+          <div className="neoTube_video_ProfileBlock">
+            <div className="neoTube_video_ProfileBlockLeft">
+              <Link
+                to={`/user/${video.user.id}`}
+                className="ProfileBlockLeftImages"
+              >
+                <img
+                  className="ProfileBlockLeftImage"
+                  src={video.user.profilePicture}
+                  alt={video.user.username}
+                />
+              </Link>
+              <div className="video_subsView">
+                <div className="neoTubeProfileName">{video.user.username}</div>
+                <div className="neoTubeProfileSubs">
+                  {formatDate(video.createdAt)}
                 </div>
-
-
-                <div className="neoTube_video_LikeBlock">
-                    <div className="neoTube_video_LikeBlock_Like">
-                        <ThumbUpIcon/>
-                        <div className="neoTube_video_LikeBlock_NoOfLikes">{}</div>
-                    </div>
-
-                    <div className="likesDivider"></div>
-                    <div className="neoTube_video_LikeBlock_Like">
-                        <ThumbDownIcon/>
-                        <div className="neoTube_video_LikeBlock_NoOfLikes">{}</div>
-                    </div>
-
-                </div>
-
-
+              </div>
+              <div className="subsButton">Subscribe</div>
             </div>
-
-            <div className="neotube_video_about">
-              <div>2025-01-25</div>
-              <div>That's my first video of NeoTube</div>
-            </div>
-
-            <div className="neotubeCommentSection">
-
-              <div className="neotubeCommentSectionTitle">2 comment</div>
-              
-              <div className="neotubeSelfComment"> 
-                <img className='neotubeSelfCommentProfile' src="https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg?s=612x612&w=0&k=20&c=FEppaMMfyIYV2HJ6Ty8tLmPL1GX6Tz9u9Y8SCRrkD-o=" alt="" srcset="" />
-                <div className="addAComment">
-                  <input type="text" className='addACommentInput' placeholder='Add a comment' />
-                  <div className="cancelSubmitComment">
-                    <div className="cancelComment">Cancel</div>
-                    <div className="cancelComment">Comment</div>  
-                  </div>
+            <div className="neoTube_video_LikeBlock">
+              <div
+                className={`neoTube_video_LikeBlock_Like ${
+                  userLiked ? 'active' : ''
+                }`}
+                onClick={handleLike}
+                style={{
+                  cursor: 'pointer',
+                  color: userLiked ? '#1976d2' : 'inherit',
+                }}
+              >
+                <ThumbUpIcon />
+                <div className="neoTube_video_LikeBlock_NoOfLikes">
+                  {likeCount}
                 </div>
               </div>
 
-              <div className="neotubeOtherComments">
-                <div className="neotubeSelfComment"> 
-                  <img className='neotubeSelfCommentProfile' src="https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg?s=612x612&w=0&k=20&c=FEppaMMfyIYV2HJ6Ty8tLmPL1GX6Tz9u9Y8SCRrkD-o=" alt="" srcset="" />
-                 
-                  <div className="otherCommentSection">
-                    <div className="otherCommentSectionHeader">
-                      <div className="channelName_comment">{"User 1"}</div>
-                      <div className="commentTimingOther">{"6 months ago"}</div>
-                    </div>
-
-                    <div className="otherCommentSectionComment">
-                      this is a nice project
-                    </div>
-
-                  </div>
-               
-                </div>
-
-                <div className="neotubeSelfComment"> 
-                  <img className='neotubeSelfCommentProfile' src="https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg?s=612x612&w=0&k=20&c=FEppaMMfyIYV2HJ6Ty8tLmPL1GX6Tz9u9Y8SCRrkD-o=" alt="" srcset="" />
-                 
-                  <div className="otherCommentSection">
-                    <div className="otherCommentSectionHeader">
-                      <div className="channelName_comment">{"User 1"}</div>
-                      <div className="commentTimingOther">{"6 months ago"}</div>
-                    </div>
-
-                    <div className="otherCommentSectionComment">
-                      this is a nice project
-                    </div>
-
-                  </div>
-               
-                </div>
-
-                <div className="neotubeSelfComment"> 
-                  <img className='neotubeSelfCommentProfile' src="https://media.istockphoto.com/id/1087531642/vector/male-face-silhouette-or-icon-man-avatar-profile-unknown-or-anonymous-person-vector.jpg?s=612x612&w=0&k=20&c=FEppaMMfyIYV2HJ6Ty8tLmPL1GX6Tz9u9Y8SCRrkD-o=" alt="" srcset="" />
-                 
-                  <div className="otherCommentSection">
-                    <div className="otherCommentSectionHeader">
-                      <div className="channelName_comment">{"User 1"}</div>
-                      <div className="commentTimingOther">{"6 months ago"}</div>
-                    </div>
-
-                    <div className="otherCommentSectionComment">
-                      this is a nice project
-                    </div>
-
-                  </div>
-               
+              <div className="likesDivider"></div>
+              <div
+                className={`neoTube_video_LikeBlock_Like ${
+                  userDisliked ? 'active' : ''
+                }`}
+                onClick={handleDislike}
+                style={{
+                  cursor: 'pointer',
+                  color: userDisliked ? '#1976d2' : 'inherit',
+                }}
+              >
+                <ThumbDownIcon />
+                <div className="neoTube_video_LikeBlock_NoOfLikes">
+                  {dislikeCount}
                 </div>
               </div>
-
+            </div>
+          </div>
+          <div className="neotube_video_about">
+            <div>{formatDate(video.createdAt)}</div>
+            <div>{video.description}</div>
+          </div>
+          <div className="neotubeCommentSection">
+            <div className="neotubeCommentSectionTitle">
+              {video.comments.length} comment
+              {video.comments.length !== 1 ? 's' : ''}
+            </div>
+            <div className="neotubeSelfComment">
+              <img
+                className="neotubeSelfCommentProfile"
+                src={
+                  localStorage.getItem('userProfilePic') ||
+                  defaultProfilePicture
+                }
+                alt="User Profile"
+              />
+              <input
+                type="text"
+                className="addACommentInput"
+                placeholder="Add a comment"
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onFocus={(e) => {
+                  if (!isLoggedIn) {
+                    toast.info('Sign in to comment', {
+                      position: 'top-center',
+                      autoClose: 1000,
+                    });
+                    e.target.blur();
+                    return;
+                  }
+                  setIsCommentFocused(true);
+                }}
+              />
+              {isCommentFocused && (
+                <>
+                  <button
+                    className="cancelComment"
+                    onClick={() => {
+                      setCommentText('');
+                      setIsCommentFocused(false);
+                    }}
+                    >
+                    Cancel
+                  </button>
+                  <button
+                    className="cancelComment"
+                    onClick={handleCommentSubmit}
+                  >
+                    Comment
+                  </button>
+                </>
+              )}
             </div>
 
-
+            <div className="neotubeOtherComments">
+              {video.comments.map((comment) => (
+                <div className="neotubeSelfComment" key={comment.id}>
+                  <img
+                    className="neotubeSelfCommentProfile"
+                    src={
+                      comment.user?.profilePicture || defaultProfilePicture
+                    }
+                    alt={comment.user?.username || 'Anonymous'}
+                  />
+                  <div className="otherCommentSection">
+                    <div className="otherCommentSectionHeader">
+                      <div className="channelName_comment">
+                        {comment.user?.username || 'Unknown User'}
+                      </div>
+                      <div className="commentTimingOther">
+                        {formatTimeAgo(new Date(comment.createdAt))}
+                      </div>
+                    </div>
+                    <div className="otherCommentSectionComment">
+                      {comment.content}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-
       </div>
 
       <div className="videoSuggestions">
-
-                <div className="videoSuggestionsBlock">
-                    <div className="video_suggetion_thumbnail">
-                        <img src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" className='video_suggetion_thumbnail_img' />
-                    </div>
-                    <div className="video_suggetions_About">
-                        <div className="video_suggetions_About_title">T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india</div>
-                        <div className="video_suggetions_About_Profile">Cricket 320</div>
-                        <div className="video_suggetions_About_Profile">136K views . 1 day ago</div>
-                    </div>
-                </div>
-
-                <div className="videoSuggestionsBlock">
-                    <div className="video_suggetion_thumbnail">
-                        <img src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" className='video_suggetion_thumbnail_img' />
-                    </div>
-                    <div className="video_suggetions_About">
-                        <div className="video_suggetions_About_title">T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india</div>
-                        <div className="video_suggetions_About_Profile">Cricket 320</div>
-                        <div className="video_suggetions_About_Profile">136K views . 1 day ago</div>
-                    </div>
-                </div>
-
-                <div className="videoSuggestionsBlock">
-                    <div className="video_suggetion_thumbnail">
-                        <img src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" className='video_suggetion_thumbnail_img' />
-                    </div>
-                    <div className="video_suggetions_About">
-                        <div className="video_suggetions_About_title">T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india</div>
-                        <div className="video_suggetions_About_Profile">Cricket 320</div>
-                        <div className="video_suggetions_About_Profile">136K views . 1 day ago</div>
-                    </div>
-                </div>
-
-
-                <div className="videoSuggestionsBlock">
-                    <div className="video_suggetion_thumbnail">
-                        <img src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" className='video_suggetion_thumbnail_img' />
-                    </div>
-                    <div className="video_suggetions_About">
-                        <div className="video_suggetions_About_title">T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india</div>
-                        <div className="video_suggetions_About_Profile">Cricket 320</div>
-                        <div className="video_suggetions_About_Profile">136K views . 1 day ago</div>
-                    </div>
-                </div>
-
-
-                <div className="videoSuggestionsBlock">
-                    <div className="video_suggetion_thumbnail">
-                        <img src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" className='video_suggetion_thumbnail_img' />
-                    </div>
-                    <div className="video_suggetions_About">
-                        <div className="video_suggetions_About_title">T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india</div>
-                        <div className="video_suggetions_About_Profile">Cricket 320</div>
-                        <div className="video_suggetions_About_Profile">136K views . 1 day ago</div>
-                    </div>
-                </div>
-
-
-                <div className="videoSuggestionsBlock">
-                    <div className="video_suggetion_thumbnail">
-                        <img src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" className='video_suggetion_thumbnail_img' />
-                    </div>
-                    <div className="video_suggetions_About">
-                        <div className="video_suggetions_About_title">T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india</div>
-                        <div className="video_suggetions_About_Profile">Cricket 320</div>
-                        <div className="video_suggetions_About_Profile">136K views . 1 day ago</div>
-                    </div>
-                </div>
-
-
-                <div className="videoSuggestionsBlock">
-                    <div className="video_suggetion_thumbnail">
-                        <img src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" className='video_suggetion_thumbnail_img' />
-                    </div>
-                    <div className="video_suggetions_About">
-                        <div className="video_suggetions_About_title">T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india</div>
-                        <div className="video_suggetions_About_Profile">Cricket 320</div>
-                        <div className="video_suggetions_About_Profile">136K views . 1 day ago</div>
-                    </div>
-                </div>
-                
-                <div className="videoSuggestionsBlock">
-                    <div className="video_suggetion_thumbnail">
-                        <img src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7" className='video_suggetion_thumbnail_img' />
-                    </div>
-                    <div className="video_suggetions_About">
-                        <div className="video_suggetions_About_title">T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india</div>
-                        <div className="video_suggetions_About_Profile">Cricket 320</div>
-                        <div className="video_suggetions_About_Profile">136K views . 1 day ago</div>
-                    </div>
-                </div>
+        {/* Recommended videos section - you could fetch related videos here */}
+        <div className="videoSuggestionsBlock">
+          <div className="video_suggestion_thumbnail">
+            <img
+              src="https://th.bing.com/th/id/OIP.8gLtXrl4KYPfPA6QyMnlUwHaEK?w=304&h=180&c=7&r=0&o=5&dpr=1.3&pid=1.7"
+              className="video_suggestion_thumbnail_img"
+              alt="Cricket video thumbnail"
+            />
+          </div>
+          <div className="video_suggestions_About">
+            <div className="video_suggestions_About_title">
+              T20 2024 Worldcup Final IND vs SA Last 5 overs #cricket #india
             </div>
-
-            <ToastContainer/>
-
-      
+            <div className="video_suggestions_About_Profile">Cricket 320</div>
+            <div className="video_suggestions_About_Profile">
+              136K views · 1 day ago
+            </div>
+          </div>
+        </div>
+        {/* More suggested videos would go here */}
+      </div>
+      <ToastContainer />
     </div>
-  )
-}
+  );
+};
 
-export default Video
+export default Video;
+

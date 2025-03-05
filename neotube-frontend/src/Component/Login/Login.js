@@ -19,46 +19,61 @@ const Login = ({ setLoginModal }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleLogin = async () => {
-    if (!formData.usernameOrEmail || !formData.password) {
-      toast.error("Please enter both username/email and password");
-      return;
-    }
 
-    setIsLoading(true);
-    try {
-      const response = await axios.post(
-        "http://localhost:3000/api/v1/user/signin",
-        formData,
-        {
+const handleLogin = async () => {
+  if (!formData.usernameOrEmail || !formData.password) {
+    toast.error("Please enter both username/email and password");
+    return;
+  }
+  setIsLoading(true);
+  try {
+    const response = await axios.post(
+      "http://localhost:3000/api/v1/user/signin",
+      formData,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        withCredentials: true,
+      }
+    );
+    const accessToken = response.data?.data?.accessToken;
+    if (accessToken) {
+      localStorage.setItem("accessToken", accessToken);
+      
+      try {
+        const userResponse = await axios.get("http://localhost:3000/api/v1/user/user", {
           headers: {
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
           },
           withCredentials: true,
+        });
+        
+        if (userResponse.data.data.profilePicture) {
+          localStorage.setItem("userProfilePic", userResponse.data.data.profilePicture);
+          
+          const profileUpdateEvent = new CustomEvent('profileUpdate', { 
+            detail: { profilePicture: userResponse.data.data.profilePicture } 
+          });
+          window.dispatchEvent(profileUpdateEvent);
         }
-      );
-
-      console.log("Full API Response:", response.data);
-
-      const accessToken = response.data?.data?.accessToken;
-      if (accessToken) {
-        localStorage.setItem("accessToken", accessToken);
-        console.log("Token stored:", accessToken);
-
-        toast.success("Login successful!");
-        setLoginModal && setLoginModal(); 
-        setTimeout(() => navigate("/profile"), 1500);
-      } else {
-        toast.error("No access token received from server!");
+      } catch (profileError) {
+        console.error("Error fetching profile after login:", profileError);
       }
-    } catch (error) {
-      console.error("Login error:", error.response?.data || error.message);
-      toast.error(error.response?.data?.message || "Login failed!");
-    } finally {
-      setIsLoading(false);
+      
+      toast.success("Login successful!");
+      setLoginModal && setLoginModal(); 
+      setTimeout(() => navigate("/profile"), 1500);
+    } else {
+      toast.error("No access token received from server!");
     }
-  };
-
+  } catch (error) {
+    console.error("Login error:", error.response?.data || error.message);
+    toast.error(error.response?.data?.message || "Login failed!");
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="login">
       <div className="login_card">
@@ -100,9 +115,10 @@ const Login = ({ setLoginModal }) => {
           <Link to={"/signup"} onClick={() => setLoginModal && setLoginModal()} className="login-btn">
             SignUp
           </Link>
-          <div className="login-btn" onClick={() => setLoginModal && setLoginModal()}>
-            Cancel
-          </div>
+          <div className="login-btn" onClick={() => {setLoginModal && setLoginModal(); navigate("/");
+}}>
+  Cancel
+</div>
         </div>
       </div>
       <ToastContainer />

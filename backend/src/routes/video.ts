@@ -12,17 +12,17 @@ router.post("/upload", authenticate, uploadVideoWithThumbnail, validate(videoUpl
 
 router.delete("/:id", authenticate, asyncHandler(deleteVideoById))
 
-router.get("/:userId/videos", authenticate, asyncHandler(getVideosByUser))
+router.get("/:userId/videos", authenticate, asyncHandler(getVideosByUser))  //if i enter userId it shows me number of videos they have uploaded --> used
 
-router.get("/", authenticate, asyncHandler(getAllVideos))
+router.get("/", asyncHandler(getAllVideos)) // used
 
 router.get("/liked-videos", authenticate, asyncHandler(getLikedVideos))
 
-router.get("/:id", authenticate, asyncHandler(getVideoById))
+router.get("/:id", asyncHandler(getVideoById))  //to get a particular video using videoId -->used
 
-router.post("/:id/like", authenticate, asyncHandler(likeVideo))
+router.post("/:id/like", authenticate, asyncHandler(likeVideo)) //used
 
-router.post("/:id/dislike", authenticate, asyncHandler(dislikeVideo))
+router.post("/:id/dislike", authenticate, asyncHandler(dislikeVideo)) //used
 
 router.post("/:videoId/comment", authenticate, validate(commentSchema), asyncHandler(addComment))
 

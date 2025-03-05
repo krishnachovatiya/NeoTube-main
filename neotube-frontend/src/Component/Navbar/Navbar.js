@@ -22,78 +22,72 @@ const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
   const [navbarModal, setNavbarModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('accessToken'));
 
-  useEffect(() => {
-    const storedProfilePic = localStorage.getItem("userProfilePic");
-    if (storedProfilePic) {
-      setUserPic(storedProfilePic);
-    }
+useEffect(() => {
+  const token = localStorage.getItem('accessToken');
+  const storedProfilePic = localStorage.getItem("userProfilePic");
   
-    // Check if user is logged in based on token presence
-    const token = localStorage.getItem('accessToken');
-    setIsLoggedIn(!!token);
-    
-    if (token) {
-      fetchUserProfile();
-    }
+  setIsLoggedIn(!!token);
   
-    // Listen for profile picture updates with our custom event
-    const handleProfileUpdate = (event) => {
-      if (event.detail && event.detail.profilePicture) {
-        setUserPic(event.detail.profilePicture);
-      }
-    };
-  
-    window.addEventListener("profileUpdate", handleProfileUpdate);
-    
-    // Keep the storage event listener for cross-tab updates
-    const handleStorageChange = () => {
-      const token = localStorage.getItem('accessToken');
-      setIsLoggedIn(!!token);
-      
-      const storedPic = localStorage.getItem("userProfilePic");
-      if (storedPic) {
-        setUserPic(storedPic);
-      } else if (!token) {
-        setUserPic("https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png");
-      }
-    };
-    
-    window.addEventListener("storage", handleStorageChange);
-  
-    return () => {
-      window.removeEventListener("profileUpdate", handleProfileUpdate);
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
-  
-  const fetchUserProfile = async () => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setIsLoggedIn(false);
-        return;
-      }
-  
-      const response = await axios.get('http://localhost:3000/api/v1/user/user', {
-        headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true,
-      });
-  
-      if (response.data.data.profilePicture) {
-        localStorage.setItem("userProfilePic", response.data.data.profilePicture);
-        setUserPic(response.data.data.profilePicture);
-      }
-      
-      setIsLoggedIn(true);
-    } catch (error) {
-      console.error("Error fetching user:", error.response?.data || error.message);
-      // If error is 401 Unauthorized, clear token and set isLoggedIn to false
-      if (error.response?.status === 401) {
-        localStorage.removeItem("accessToken");
-        setIsLoggedIn(false);
-      }
+  if (storedProfilePic) {
+    setUserPic(storedProfilePic);
+  } else if (token) {
+    fetchUserProfile();
+  } else {
+    setUserPic("https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png");
+  }
+
+  const handleProfileUpdate = (event) => {
+    if (event.detail && event.detail.profilePicture) {
+      setUserPic(event.detail.profilePicture);
     }
   };
+
+  window.addEventListener("profileUpdate", handleProfileUpdate);
+  
+  const handleStorageChange = (e) => {
+    if (e.key === "accessToken") {
+      setIsLoggedIn(!!e.newValue);
+    }
+    if (e.key === "userProfilePic" && e.newValue) {
+      setUserPic(e.newValue);
+    }
+  };
+  
+  window.addEventListener("storage", handleStorageChange);
+
+  return () => {
+    window.removeEventListener("profileUpdate", handleProfileUpdate);
+    window.removeEventListener("storage", handleStorageChange);
+  };
+}, []);
+  
+const fetchUserProfile = async () => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setIsLoggedIn(false);
+      return;
+    }
+
+    const response = await axios.get('http://localhost:3000/api/v1/user/user', {
+      headers: { Authorization: `Bearer ${token}` },
+      withCredentials: true,
+    });
+
+    if (response.data.data.profilePicture) {
+      setUserPic(response.data.data.profilePicture);
+      localStorage.setItem("userProfilePic", response.data.data.profilePicture);
+    }
+    
+    setIsLoggedIn(true);
+  } catch (error) {
+    console.error("Error fetching user:", error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      localStorage.removeItem("accessToken");
+      setIsLoggedIn(false);
+    }
+  }
+};
   
   const handleProfile = () => {
     navigate('/profile');
@@ -111,13 +105,17 @@ const Navbar = ({ setSideNavbarFunc, sidenavbar }) => {
   };
   
   const handleUploadClick = () => {
-    if (!isLoggedIn) {
+    const token = localStorage.getItem("accessToken");
+  
+    if (!token) {
       alert("You need to log in to upload a video!");
       navigate("/login");
     } else {
       navigate("/upload");
     }
   };
+  
+  
 
   return (
     <div className='navbar'>

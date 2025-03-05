@@ -1,52 +1,83 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import './HomePage.css'
 import { Link } from 'react-router-dom'
+import axios from 'axios'
 
-const HomePage = ({sidenavbar}) => {
- 
-const options=["All", "Comedy", "Education", "Music", "Mixes", "Calculus", "Indian Pop Music", "Live", "Debates", "Dancing", "Cricket", "Movies", "T-Series", "Watched", "New to You", "News", "Coke Studio" ]
+const HomePage = ({ sidenavbar }) => {
+  const [videos, setVideos] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const options = ["All", "Comedy", "Education", "Music", "Mixes", "Calculus", "Indian Pop Music", "Live", "Debates", "Dancing", "Cricket", "Movies", "T-Series", "Watched", "New to You", "News", "Coke Studio"]
+
+  useEffect(() => {
+   
+    const fetchVideos = async () => {
+      try {
+        
+        const response = await axios.get('http://localhost:3000/api/v1/video/');
+        
+        setVideos(response.data.data)
+        setLoading(false)
+      } catch (err) {
+        console.error('Error fetching videos:', err)
+        console.error('Error details:', err.response?.data || 'No response data') 
+        setError(`Failed to fetch videos: ${err.message}`)
+        setLoading(false)
+      }
+    }
+
+    fetchVideos()
+  }, [])
+
+
+
   return (
-   <div className={sidenavbar?'homepage' : 'fullHomepage'}>
+    <div className={sidenavbar ? 'homepage' : 'fullHomepage'}>
       <div className="homepage-options">
-       {options.map((item,index)=>{
-        return(
-          <div key={index} className="homepage-option">{item}</div>
-        )
-       })}
-
-
+        {options.map((item, index) => {
+          return (
+            <div key={index} className="homepage-option">{item}</div>
+          )
+        })}
       </div>
-
-
-      <div className={sidenavbar? "home-mainpage" : "fullMainHomePage"}>
-        <Link to={'/watch/1234'} className="neotube-video">
-          <div className="neotube-thumbnailBox">
-            <img src="https://www.vdocipher.com/blog/wp-content/uploads/2023/12/DALL%C2%B7E-2023-12-10-20.21.58-A-creative-and-visually-appealing-featured-image-for-a-blog-about-video-thumbnails-for-various-social-platforms-like-YouTube-Instagram-and-TikTok-s-1024x585.png" alt="thumbnail" className="thumbnailPic" />
-            <div className="thumbnail-timing">20:00</div>
-          </div>
-
-          <div className="neotube-TitleBox">
-            <div className="neotube-TitleBoxProfile">
-              <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRvPjv1lHEIpzgDk_e3Sm-e4EVOzggYdb5aHA&s" alt="" className="thumbnailProfilePic" />
-            </div>
-
-          <div className="neotube-TitleBoxTitle">
-            <div className="videoTitle">User 1</div>
-            <div className="videoChannelName">Channel 1</div>
-            <div className="videoViews">3 likes</div>
-          </div>
-
-          </div>
-         
-        </Link>
-       
-       
+      
+      <div className={sidenavbar ? "home-mainpage" : "fullMainHomePage"}>
+        {loading ? (
+          <div>Loading videos...</div>
+        ) : error ? (
+          <div>{error}</div>
+        ) : (
+          videos.map((video) => (
+            <Link to={`/watch/${video.id}`} className="neotube-video" key={video.id}>
+              <div className="neotube-thumbnailBox">
+                <img 
+                  src={video.thumbnailUrl} 
+                  alt={video.title} 
+                  className="thumbnailPic" 
+                />
+            
+                <div className="thumbnail-timing">--:--</div>
+              </div>
+              <div className="neotube-TitleBox">
+                <div className="neotube-TitleBoxProfile">
+                  <img 
+                    src={video.user.profilePicture} 
+                    alt={video.user.username} 
+                    className="thumbnailProfilePic" 
+                  />
+                </div>
+                <div className="neotube-TitleBoxTitle">
+                  <div className="videoTitle">{video.title}</div>
+                  <div className="videoChannelName">{video.user.username}</div>
+                  <div className="videoViews">{video.views} views</div>
+                </div>
+              </div>
+            </Link>
+          ))
+        )}
       </div>
-
-   </div>
-
-  
-
+    </div>
   )
 }
 

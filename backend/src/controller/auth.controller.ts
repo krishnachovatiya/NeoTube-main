@@ -94,7 +94,6 @@ export const setupProfile = async (req: Request, res: Response) => {
     throw new ApiError(404, "User does not exist")
   }
   
-  // Only check for channel name conflicts if the user is changing their channel name
   if (channelName && channelName !== existingUser.channelName) {
     const channelNameExists = await prisma.user.findUnique({
       where: { channelName },
@@ -105,7 +104,6 @@ export const setupProfile = async (req: Request, res: Response) => {
     }
   }
   
-  // Move the update logic outside the conditional so it runs regardless
   const updateData: Record<string, any> = {}
   
   if (channelName) {
